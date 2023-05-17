@@ -1,0 +1,189 @@
+/* base de donnée db */
+
+<?php
+$pdo = new PDO('mysql:dbname=tuto;host=localhost', 'root', 'Nayef2021@');
+
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_OBJ);
+
+
+
+/* functions php */
+
+<?php
+
+function debug($variable){
+    echo '<pre>' . print_r($variable, true) . '<pre>';
+}
+
+function str_random($length){
+    $alphabet = "0123456789azertyuiopqsdfghjklmwxcvbnAZERTYUIOPQSDFGHJKLMWXCVBN";
+    return substr(str_shuffle(str_repeat($alphabet, $length)), 0, $length);
+}
+
+
+/* header php */
+
+
+<?php require 'functions.php'; ?>
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+    <link rel="canonical" href="https://getbootstrap.com/docs/3.4/examples/starter-template/">
+
+    <title>Mon super porjet</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/app.css" rel="stylesheet">
+
+    
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-inverse">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Mon super projet</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="register.php">S'inscrire</a></li>
+            <li><a href="Login.php">Se connecter</a></li>
+           
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container">
+
+     
+  </body>
+</html>
+
+
+
+/* register php */
+
+<?php require 'inc/header.php'; ?>
+
+<?php
+if(!empty($_POST)){
+   $errors = array();
+
+    require_once 'inc/db.php';
+
+    if(empty($_POST['username']) || !preg_match('/^[a-zA-Z0-9_]+$/', $_POST['username'])){
+    $errors['username'] = "Votre pseudo n'est pas valide (alphanumérique)";
+
+ }
+ else {
+      $req = $pdo->prepare('SELECT id FROM users WHERE username = ?');
+      $req->execute([$_POST['username']]);
+      $users = $req->fetch();
+    
+      if($users){
+        $errors['username'] = 'Ce pseudo est déjà pris';
+      }
+
+ }
+   if(empty($_POST['email']) || !filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
+     $errors['email'] = "Votre email n'est pas valide";
+   }
+   else {
+    $req = $pdo->prepare('SELECT id FROM users WHERE email = ?');
+    $req->execute([$_POST['email']]);
+    $users = $req->fetch();
+  
+    if($users){
+      $errors['email'] = 'Cet email est déjà utilisé pour un autre compte';
+    }
+
+}
+
+
+   if(empty($_POST['password']) || $_POST['password'] != $_POST['password-confirm']){
+     $errors['password'] = "Vous devez rentrer un mot de passe valide";
+
+   }
+
+ if(empty($errors)){
+    
+    $req = $pdo->prepare("INSERT INTO users SET username = ?, password = ?, email = ?, confirmation_token = ?");
+    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+    $token = str_random(60);
+      debug($token);
+      die();
+
+    $req->execute([$_POST['username'], $password, $_POST['email'], ]);
+
+    $user_id = $pdo->LastInsertId();
+    mail($_POST['email'], 'Confirmation de votre compte', "A fin de valider votre compte merci de cliquer sur ce lien\n\nhttp://localhost/comptes_user_php/confirm.php?id=$user_id&token=$token");
+    header('Location: Login.php');
+    exit();
+
+}
+  
+
+
+}
+?>
+
+<h1>S'inscrire</h1>
+
+
+<?php if(!empty($errors)):  ?>
+    <div class="alert alert-danger">
+        <p>Vous n'avez pas rempli le formulaire correctement</p>
+
+        <ul>
+        <?php foreach($errors as $error): ?>
+            <li><?= $error; ?></li>
+        <?php endforeach; ?>
+        </ul>
+    </div>
+    <?php endif; ?>
+
+
+<form action="" method="POST" >
+ 
+  <div class="form-group">
+    <label for="">Pseudo</label>
+    <input type="text" name="username" class="form-controle"/>
+  </div>
+
+  <div class="form-group">
+    <label for="">Email</label>
+    <input type="text" name="email" class="form-controle"/>
+  </div>
+
+  <div class="form-group">
+    <label for="">Mot de passe</label>
+    <input type="password" name="password" class="form-controle"/>
+  </div>
+
+  <div class="form-group">
+    <label for="">Confrimez votre mote de passe</label>
+    <input type="password" name="password-confirm" class="form-controle"/>
+  </div>
+
+  <button type="submit" class="btn btn-primary">M'inscrire</button>
+
+</form>
+
+<?php require 'inc/footer.php'; ?>
